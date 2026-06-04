@@ -7,7 +7,7 @@ SECRET_KEY = 'django-insecure-life-simulation-change-this-in-production-xyz123'
 
 DEBUG = True
 
-ALLOWED_HOSTS = [*]
+ALLOWED_HOSTS = ['*']
 
 # Applications
 INSTALLED_APPS = [
