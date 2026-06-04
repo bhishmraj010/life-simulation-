@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -56,15 +57,10 @@ TEMPLATES = [
 WSGI_APPLICATION = 'life_simulation.wsgi.application'
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('PGDATABASE'),
-        'USER': os.environ.get('PGUSER'),
-        'PASSWORD': os.environ.get('PGPASSWORD'),
-        'HOST': os.environ.get('PGHOST'),
-        'PORT': os.environ.get('PGPORT', '5432'),
-    }
+    'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
 }
+
+
 
 # Custom User Model
 AUTH_USER_MODEL = 'users.CustomUser'
