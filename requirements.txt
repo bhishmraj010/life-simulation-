@@ -4,3 +4,4 @@ Pillow
 whitenoise
 psycopg2-binary
 dj-database-url
+groq
