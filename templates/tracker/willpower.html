@@ -3,31 +3,22 @@
 
 {% block content %}
 
-<!-- ── Date Navigation ── -->
 <div class="date-nav">
+  <a href="/tracker/willpower/?date={{ prev_date }}" class="date-arrow">‹</a>
 
-    <a href="?date={{ prev_date }}" class="date-arrow">‹</a>
-        ‹
-    </a>
+  <div class="date-center">
+    <span class="date-label">
+      {% if is_today %}
+        📅 Today
+      {% else %}
+        📅 {{ selected_date|date:"l" }}
+      {% endif %}
+    </span>
 
-    <div class="date-center">
-        <span class="date-label">
-            {% if is_today %}
-                📅 TODAY
-            {% else %}
-                📅 {{ selected_date|date:"l" }}
-            {% endif %}
-        </span>
+    <span class="date-value">{{ selected_date|date:"d M Y" }}</span>
+  </div>
 
-        <span class="date-value">
-            {{ selected_date|date:"d M Y" }}
-        </span>
-    </div>
-
-    <a href="?date={{ next_date }}" class="date-arrow">›</a>
-        ›
-    </a>
-
+  <a href="/tracker/willpower/?date={{ next_date }}" class="date-arrow">›</a>
 </div>
 
 <!-- ── Stats Bar ── -->
