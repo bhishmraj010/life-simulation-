@@ -32,47 +32,54 @@ def willpower(request):
     except ValueError:
         selected_date = today
 
-    prev_date = selected_date - timedelta(days=1)
-    next_date = selected_date + timedelta(days=1)
-    is_today  = (selected_date == today)
+    # FIXED DATE NAVIGATION
+    prev_date = (selected_date - timedelta(days=1)).strftime('%Y-%m-%d')
+    next_date = (selected_date + timedelta(days=1)).strftime('%Y-%m-%d')
+    is_today = (selected_date == today)
 
     if request.method == 'POST':
         action = request.POST.get('action')
-        title  = request.POST.get('title', '').strip()
+        title = request.POST.get('title', '').strip()
 
         if action == 'add' and title:
             WillpowerTask.objects.create(
-                user     = request.user,
-                title    = title,
-                due_date = selected_date,
+                user=request.user,
+                title=title,
+                due_date=selected_date,
             )
             messages.success(request, f'Challenge added: "{title}"')
 
         return redirect(f'/tracker/willpower/?date={selected_date}')
 
-    tasks     = WillpowerTask.objects.filter(user=request.user, due_date=selected_date)
-    pending   = tasks.filter(status='pending')
+    tasks = WillpowerTask.objects.filter(
+        user=request.user,
+        due_date=selected_date
+    )
+
+    pending = tasks.filter(status='pending')
     completed = tasks.filter(status='completed')
-    skipped   = tasks.filter(status='skipped')
+    skipped = tasks.filter(status='skipped')
 
     wp_points = sum(
-        WILLPOWER_POINTS if t.status == 'completed' else
-        -WILLPOWER_DEDUCT if t.status == 'skipped' else 0
+        WILLPOWER_POINTS if t.status == 'completed'
+        else -WILLPOWER_DEDUCT if t.status == 'skipped'
+        else 0
         for t in tasks
     )
 
     context = {
-        'today':         today,
+        'today': today,
         'selected_date': selected_date,
-        'prev_date':     prev_date,
-        'next_date':     next_date,
-        'is_today':      is_today,
-        'pending':       pending,
-        'completed':     completed,
-        'skipped':       skipped,
-        'tasks':         tasks,
-        'wp_points':     wp_points,
+        'prev_date': prev_date,
+        'next_date': next_date,
+        'is_today': is_today,
+        'pending': pending,
+        'completed': completed,
+        'skipped': skipped,
+        'tasks': tasks,
+        'wp_points': wp_points,
     }
+
     return render(request, 'tracker/willpower.html', context)
 
 
