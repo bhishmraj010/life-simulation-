@@ -9,10 +9,7 @@
   <div class="date-center">
     <span class="date-label">{% if is_today %}📅 Today{% else %}📅 {{ selected_date|date:"l" }}{% endif %}</span>
     <span class="date-value">{{ selected_date|date:"d M Y" }}</span>
-    <input type="date" id="date-picker" value="{{ selected_date|date:'Y-m-d' }}"
-      max="{{ today|date:'Y-m-d' }}"
-      onchange="window.location='/tracker/willpower/?date='+this.value"
-      class="date-picker-input" />
+    
   </div>
   <a href="/tracker/willpower/?date={{ next_date }}" class="date-arrow">›</a>
 </div>
