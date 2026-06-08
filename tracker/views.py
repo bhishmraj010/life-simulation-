@@ -32,9 +32,9 @@ def willpower(request):
     except ValueError:
         selected_date = today
 
-    # FIXED DATE NAVIGATION
-    prev_date = (selected_date - timedelta(days=1)).strftime('%Y-%m-%d')
-    next_date = (selected_date + timedelta(days=1)).strftime('%Y-%m-%d')
+    # Dashboard jaisa date handling
+    prev_date = (selected_date - timedelta(days=1)).isoformat()
+    next_date = (selected_date + timedelta(days=1)).isoformat()
     is_today = (selected_date == today)
 
     if request.method == 'POST':
