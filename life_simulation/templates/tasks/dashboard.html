@@ -1,0 +1,462 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — Life Is Simulation{% endblock %}
+
+{% block content %}
+
+{% if level_up_popup %}
+<div class="level-up-overlay" id="level-up-overlay">
+  <div class="level-up-card">
+    <div class="level-up-card__trophy">🏆</div>
+    <div class="level-up-card__title">LEVEL COMPLETE!</div>
+    <div class="level-up-card__subtitle">Level {{ level_up_popup.level }} — {{ level_up_popup.title }}</div>
+    <button type="button" class="level-up-card__btn" id="level-up-close">Continue</button>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Level Card ── -->
+<div class="level-card">
+  <div class="level-left">
+    <span class="level-icon">{{ cur_level.icon }}</span>
+    <div>
+      <div class="level-name">
+        Level {{ user.level }} — {{ cur_level.name }}
+        <span class="level-badge">{{ user.title }}</span>
+      </div>
+      <div class="level-xp">{{ user.total_xp }} XP total</div>
+      {% if cur_level.special %}
+      <div style="font-size:0.75rem; color:var(--accent); margin-top:2px;">✨ {{ cur_level.special }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="level-right">
+    {% if nxt_level %}
+      <div class="level-progress-label">
+        <span style="color:var(--text-secondary); font-size:0.8rem;">
+          Next: {{ nxt_level.icon }} {{ nxt_level.name }}
+        </span>
+        <span style="font-size:0.8rem; color:var(--accent);">{{ xp_to_next }} XP left</span>
+      </div>
+      <div class="progress-track" style="height:8px; margin-top:4px;">
+        <div class="progress-fill" style="width:{{ xp_pct }}%; background:var(--accent);"></div>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-top:4px; flex-wrap:wrap; gap:4px;">
+        <span style="font-size:0.72rem; color:var(--text-secondary);">
+          Need {{ nxt_level.pts_required }} XP to unlock
+        </span>
+        {% if days_left is not None %}
+        <span style="font-size:0.72rem;
+          color:{% if days_left <= 2 %}var(--lose-color){% elif days_left <= 5 %}var(--survive-color){% else %}var(--text-secondary){% endif %}">
+          ⏰ {{ days_left }} day{{ days_left|pluralize }} left
+          {% if days_left <= 2 %} ⚠️ Hurry!{% endif %}
+        </span>
+        {% endif %}
+      </div>
+    {% else %}
+      <div style="color:var(--gold); font-weight:700; font-size:1rem;">🏆 MAX LEVEL — You are LEGEND!</div>
+    {% endif %}
+  </div>
+</div>
+
+{% if pending_boss %}
+<a href="/dashboard/boss/" class="boss-pending-banner">
+  <span class="boss-pending-banner__icon">
+    {% if pending_boss.boss_type == 'mini' %}⚔️{% elif pending_boss.level_number == 10 %}🏆{% else %}🐉{% endif %}
+  </span>
+  <span class="boss-pending-banner__text">
+    <strong>{{ pending_boss.name }}</strong> is blocking your next level up — finish the fight whenever you're ready.
+  </span>
+  <span class="boss-pending-banner__cta">Fight now →</span>
+</a>
+{% endif %}
+
+<!-- ── Date Navigation ── -->
+<div class="date-nav">
+  <a href="/dashboard/?date={{ prev_date }}" class="date-arrow" title="Previous Day">‹</a>
+  <div class="date-center">
+    <span class="date-label">
+      {% if is_today %}📅 Today
+      {% elif selected_date > today %}🗓️ {{ selected_date|date:"l" }} (Future)
+      {% else %}📅 {{ selected_date|date:"l" }}{% endif %}
+    </span>
+    <span class="date-value">{{ selected_date|date:"d M Y" }}</span>
+    <input type="date" id="date-picker" value="{{ selected_date|date:'Y-m-d' }}"
+      onchange="window.location='/dashboard/?date='+this.value"
+      class="date-picker-input" />
+  </div>
+  <a href="/dashboard/?date={{ next_date }}" class="date-arrow" title="Next Day">›</a>
+</div>
+
+<!-- ── Mode Banner ── -->
+{% if selected_date > today %}
+<div style="background:#7c6fff15;border:1px solid var(--accent)44;border-radius:10px;padding:0.65rem 1rem;margin-bottom:1rem;font-size:0.88rem;color:var(--accent);">
+  🗓️ <strong>Planning Mode</strong> — You can add tasks for this day. Complete/Skip only available on the actual day.
+</div>
+{% elif selected_date < today %}
+<div style="background:#f5c84210;border:1px solid #f5c84244;border-radius:10px;padding:0.65rem 1rem;margin-bottom:1rem;font-size:0.88rem;color:#f5c842;">
+  📖 <strong>Read Only</strong> — This is a past day. No changes allowed.
+</div>
+{% endif %}
+
+<!-- ── Stats Bar ── -->
+<div class="stats-bar">
+  <div class="stat-card">
+    <span class="stat-label">Points</span>
+    <span class="stat-value" id="total-points"
+      style="color:{% if log.day_status == 'win' %}var(--win-color){% elif log.day_status == 'survive' %}var(--survive-color){% else %}var(--lose-color){% endif %}">
+      {{ log.total_points }}
+    </span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Day Status</span>
+    <span class="stat-value status-{{ log.day_status }}" id="day-status">
+      {% if log.day_status == 'win' %}🏆 WIN
+      {% elif log.day_status == 'survive' %}⚔️ SURVIVE
+      {% else %}💀 LOSE{% endif %}
+    </span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">🔥 Streak</span>
+    <span class="stat-value" style="color:var(--gold)" id="streak">{{ log.streak }} days</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Tasks Done</span>
+    <span class="stat-value" style="color:var(--accent)">{{ completed.count }} / {{ tasks.count }}</span>
+  </div>
+</div>
+
+{% if log.punishment %}
+<div class="message message-error" style="margin-bottom:1.5rem;">
+  ⚠️ Yesterday was a <strong>Lose Day</strong> — today starts with <strong>-10 points</strong>. Fight back! 💪
+</div>
+{% endif %}
+
+<!-- ── Progress Bar ── -->
+<div class="card" style="margin-bottom:1.5rem;">
+  <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+    <span style="font-size:0.85rem; color:var(--text-secondary)">Daily Progress</span>
+    <span style="font-size:0.85rem; color:var(--text-secondary)" id="progress-label">{{ log.total_points }}/{{ win_pts }}</span>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill" id="progress-bar"
+      style="width:clamp(0%, calc({{ log.total_points }} / {{ win_pts }} * 100%), 100%);
+      {% if log.day_status == 'win' %}background:var(--win-color);
+      {% elif log.day_status == 'survive' %}background:var(--survive-color);
+      {% else %}background:var(--lose-color);{% endif %}">
+    </div>
+  </div>
+  <div style="display:flex; justify-content:space-between; margin-top:0.4rem;">
+    <span style="font-size:0.75rem; color:var(--lose-color)">💀 Lose &lt;{{ survive_pts }}</span>
+    <span style="font-size:0.75rem; color:var(--survive-color)">⚔️ Survive {{ survive_pts }}–{{ win_pts|add:"-1" }}</span>
+    <span style="font-size:0.75rem; color:var(--win-color)">🏆 Win {{ win_pts }}+</span>
+  </div>
+</div>
+
+<!-- ── Task Table ── -->
+<div class="card" style="margin-bottom:1.5rem;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+    <p class="card-title" style="margin:0;">📋 Tasks</p>
+    <span style="font-size:0.8rem; color:var(--text-secondary)">
+      Win = {{ win_pts }}pts | Survive = {{ survive_pts }}pts | Level {{ user.level }}
+    </span>
+  </div>
+  <div class="table-wrapper">
+    <table class="task-table">
+      <thead>
+        <tr>
+          <th style="width:38%">Task</th>
+          <th style="width:15%; text-align:center;">Priority</th>
+          <th style="width:10%; text-align:center;">Points</th>
+          <th style="width:12%; text-align:center;">Status</th>
+          <th style="width:25%; text-align:center;">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="task-tbody">
+
+        <!-- Add row: Today OR Future only -->
+        {% if selected_date >= today %}
+        <tr class="add-row" id="add-row">
+          <td><input type="text" id="new-task-title" placeholder="+ Add a task..." class="table-input" /></td>
+          <td style="text-align:center;">
+            <select id="new-task-priority" class="table-select">
+              <option value="5">★★★★★</option>
+              <option value="4">★★★★☆</option>
+              <option value="3" selected>★★★☆☆</option>
+              <option value="2">★★☆☆☆</option>
+              <option value="1">★☆☆☆☆</option>
+            </select>
+          </td>
+          <td style="text-align:center; color:var(--text-secondary);">—</td>
+          <td style="text-align:center;"><span class="status-badge badge-pending">Pending</span></td>
+          <td style="text-align:center;">
+            <button type="button" class="btn btn-primary" id="add-task-btn" style="padding:0.3rem 1.1rem; font-size:0.85rem;">Add ➕</button>
+          </td>
+        </tr>
+        {% endif %}
+
+        <!-- Pending tasks -->
+        {% for task in pending %}
+        <tr class="task-row" id="task-{{ task.id }}">
+          <td class="task-name">{{ task.title }}</td>
+          <td style="text-align:center;"><span class="stars-cell">{{ task.stars }}</span></td>
+          <td style="text-align:center;"><span class="pts-badge pts-positive">+{{ task.get_points }}</span></td>
+          <td style="text-align:center;"><span class="status-badge badge-pending">Pending</span></td>
+          <td style="text-align:center;">
+            <div class="action-btns">
+              {% if is_today %}
+                <button class="btn-task btn-complete" onclick="doTask({{ task.id }}, 'complete')">✅ Done</button>
+                <button class="btn-task btn-skip"     onclick="doTask({{ task.id }}, 'skip')">⏭ Skip</button>
+                <a href="{% url 'delete_task' task.id %}" class="btn-task btn-del" onclick="return confirm('Delete?')">🗑</a>
+              {% elif selected_date > today %}
+                <a href="{% url 'delete_task' task.id %}" class="btn-task btn-del" onclick="return confirm('Delete?')">🗑</a>
+              {% else %}
+                <span style="font-size:0.78rem;color:var(--text-secondary);">Read only</span>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+
+        <!-- Completed tasks -->
+        {% for task in completed %}
+        <tr class="task-row task-done-row">
+          <td class="task-name" style="text-decoration:line-through; opacity:0.5;">{{ task.title }}</td>
+          <td style="text-align:center; opacity:0.5;"><span class="stars-cell">{{ task.stars }}</span></td>
+          <td style="text-align:center;"><span class="pts-badge" style="background:#4cff9122;color:var(--win-color);">+{{ task.get_points }}</span></td>
+          <td style="text-align:center;"><span class="status-badge badge-done">✅ Done</span></td>
+          <td style="text-align:center;">
+            {% if is_today %}
+              <a href="{% url 'undo_task' task.id %}" class="btn-task btn-undo">↩ Undo</a>
+            {% else %}
+              <span style="font-size:0.78rem;color:var(--text-secondary);">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+
+        <!-- Skipped tasks -->
+        {% for task in skipped %}
+        <tr class="task-row task-skip-row">
+          <td class="task-name" style="opacity:0.4;">{{ task.title }}</td>
+          <td style="text-align:center; opacity:0.4;"><span class="stars-cell">{{ task.stars }}</span></td>
+          <td style="text-align:center;"><span class="pts-badge pts-negative">−3</span></td>
+          <td style="text-align:center;"><span class="status-badge badge-skip">⏭ Skipped</span></td>
+          <td style="text-align:center;">
+            {% if is_today %}
+              <a href="{% url 'undo_task' task.id %}" class="btn-task btn-undo">↩ Undo</a>
+            {% else %}
+              <span style="font-size:0.78rem;color:var(--text-secondary);">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+
+        {% if not tasks %}
+        <tr id="empty-tasks-row">
+          <td colspan="5" style="text-align:center; color:var(--text-secondary); padding:2rem;">
+            {% if selected_date > today %}
+              No tasks planned — add one above! 🗓️
+            {% else %}
+              No tasks for this day. 🎮
+            {% endif %}
+          </td>
+        </tr>
+        {% endif %}
+
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Willpower Summary ── -->
+{% if wp_tasks %}
+<div class="card">
+  <p class="card-title">⚡ Willpower Challenges
+    <a href="{% url 'willpower' %}?date={{ selected_date|date:'Y-m-d' }}"
+       style="font-size:0.8rem; color:var(--accent); margin-left:0.75rem; font-weight:400;">View all →</a>
+  </p>
+  <div class="table-wrapper">
+    <table class="task-table">
+      <thead><tr><th>Challenge</th><th style="text-align:center;">Points</th><th style="text-align:center;">Status</th></tr></thead>
+      <tbody>
+        {% for wt in wp_tasks %}
+        <tr class="task-row {% if wt.status == 'completed' %}task-done-row{% elif wt.status == 'skipped' %}task-skip-row{% endif %}">
+          <td>{{ wt.title }}</td>
+          <td style="text-align:center;">
+            {% if wt.status == 'completed' %}<span class="pts-badge" style="background:#4cff9122;color:var(--win-color);">+7</span>
+            {% elif wt.status == 'skipped' %}<span class="pts-badge pts-negative">−7</span>
+            {% else %}<span class="pts-badge pts-positive">+7</span>{% endif %}
+          </td>
+          <td style="text-align:center;">
+            {% if wt.status == 'completed' %}<span class="status-badge badge-done">✅ Done</span>
+            {% elif wt.status == 'skipped' %}<span class="status-badge badge-skip">⏭ Skipped</span>
+            {% else %}<span class="status-badge badge-pending">Pending</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const csrfToken = '{{ csrf_token }}';
+const WIN_PTS   = {{ win_pts }};
+const IS_TODAY  = {% if is_today %}true{% else %}false{% endif %};
+const IS_FUTURE = {% if selected_date > today %}true{% else %}false{% endif %};
+
+function starsFor(n) { return '★'.repeat(n) + '☆'.repeat(5 - n); }
+
+function buildTaskRow(t) {
+  let actions;
+  if (IS_TODAY) {
+    actions = `
+      <div class="action-btns">
+        <button class="btn-task btn-complete" onclick="doTask(${t.task_id}, 'complete')">✅ Done</button>
+        <button class="btn-task btn-skip" onclick="doTask(${t.task_id}, 'skip')">⏭ Skip</button>
+        <a href="/dashboard/delete/${t.task_id}/" class="btn-task btn-del" onclick="return confirm('Delete?')">🗑</a>
+      </div>`;
+  } else if (IS_FUTURE) {
+    actions = `<a href="/dashboard/delete/${t.task_id}/" class="btn-task btn-del" onclick="return confirm('Delete?')">🗑</a>`;
+  } else {
+    actions = `<span style="font-size:0.78rem;color:var(--text-secondary);">Read only</span>`;
+  }
+
+  const tr = document.createElement('tr');
+  tr.className = 'task-row';
+  tr.id = `task-${t.task_id}`;
+  tr.innerHTML = `
+    <td class="task-name">${t.title}</td>
+    <td style="text-align:center;"><span class="stars-cell">${starsFor(t.priority)}</span></td>
+    <td style="text-align:center;"><span class="pts-badge pts-positive">+${t.points}</span></td>
+    <td style="text-align:center;"><span class="status-badge badge-pending">Pending</span></td>
+    <td style="text-align:center;">${actions}</td>
+  `;
+  return tr;
+}
+
+const ADD_TASK_URL = "{% url 'add_task' %}";
+const SELECTED_DATE = "{{ selected_date|date:'Y-m-d' }}";
+
+async function submitNewTask() {
+  const titleInput = document.getElementById('new-task-title');
+  const priorityEl = document.getElementById('new-task-priority');
+  const addBtn     = document.getElementById('add-task-btn');
+  const title = titleInput.value.trim();
+  if (!title) { titleInput.focus(); return; }
+
+  addBtn.disabled = true;
+
+  const body = new URLSearchParams();
+  body.set('title', title);
+  body.set('priority', priorityEl.value);
+  body.set('selected_date', SELECTED_DATE);
+
+  try {
+    const res = await fetch(ADD_TASK_URL, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrfToken,
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body.toString(),
+    });
+    const data = await res.json();
+
+    if (!data.ok) {
+      alert(data.error || 'Could not add task.');
+      addBtn.disabled = false;
+      return;
+    }
+
+    const emptyRow = document.getElementById('empty-tasks-row');
+    if (emptyRow) emptyRow.remove();
+
+    const newRow = buildTaskRow(data);
+    newRow.style.opacity = '0';
+    document.getElementById('add-row').after(newRow);
+    requestAnimationFrame(() => { newRow.style.transition = 'opacity 0.25s ease'; newRow.style.opacity = '1'; });
+
+    titleInput.value = '';
+    titleInput.focus();
+
+    // Update stats bar to reflect new totals
+    document.getElementById('total-points').textContent = data.points_total;
+    document.getElementById('streak').textContent = data.streak + ' days';
+    const map = {
+      win:     { text: '🏆 WIN',     cls: 'status-win' },
+      survive: { text: '⚔️ SURVIVE', cls: 'status-survive' },
+      lose:    { text: '💀 LOSE',    cls: 'status-lose' },
+    };
+    const statusEl = document.getElementById('day-status');
+    if (map[data.day_status]) {
+      statusEl.textContent = map[data.day_status].text;
+      statusEl.className   = 'stat-value ' + map[data.day_status].cls;
+    }
+    const winPts = data.win_pts || WIN_PTS;
+    const pct = Math.min(Math.max(data.points_total / winPts * 100, 0), 100);
+    document.getElementById('progress-bar').style.width = pct + '%';
+    document.getElementById('progress-label').textContent = data.points_total + '/' + winPts;
+
+  } catch (err) {
+    alert('Something went wrong adding the task.');
+  } finally {
+    addBtn.disabled = false;
+  }
+}
+
+const addBtnEl = document.getElementById('add-task-btn');
+if (addBtnEl) {
+  addBtnEl.addEventListener('click', submitNewTask);
+  const titleInputEl = document.getElementById('new-task-title');
+  titleInputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); submitNewTask(); }
+  });
+}
+
+const levelUpOverlay = document.getElementById('level-up-overlay');
+const levelUpClose   = document.getElementById('level-up-close');
+if (levelUpClose) {
+  levelUpClose.addEventListener('click', () => levelUpOverlay.remove());
+}
+
+async function doTask(taskId, action) {
+  const url = action === 'complete'
+    ? `/dashboard/complete/${taskId}/`
+    : `/dashboard/skip/${taskId}/`;
+
+  const res  = await fetch(url, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest' }
+  });
+  const data = await res.json();
+
+  const row = document.getElementById(`task-${taskId}`);
+  if (row) { row.style.opacity = '0'; setTimeout(() => location.reload(), 300); }
+
+  document.getElementById('total-points').textContent = data.points;
+  document.getElementById('streak').textContent = data.streak + ' days';
+
+  const map = {
+    win:     { text: '🏆 WIN',     cls: 'status-win' },
+    survive: { text: '⚔️ SURVIVE', cls: 'status-survive' },
+    lose:    { text: '💀 LOSE',    cls: 'status-lose' },
+  };
+  const statusEl = document.getElementById('day-status');
+  if (map[data.day_status]) {
+    statusEl.textContent = map[data.day_status].text;
+    statusEl.className   = 'stat-value ' + map[data.day_status].cls;
+  }
+  const winPts = data.win_pts || WIN_PTS;
+  const pct    = Math.min(Math.max(data.points / winPts * 100, 0), 100);
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = data.points + '/' + winPts;
+}
+</script>
+{% endblock %}

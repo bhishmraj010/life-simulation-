@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+{% block title %}Willpower Tracker — Life Is Simulation{% endblock %}
+
+{% block content %}
+
+<!-- ── Date Navigation ── -->
+<div class="date-nav">
+  <a href="/tracker/willpower/?date={{ prev_date }}" class="date-arrow">‹</a>
+  <div class="date-center">
+    <span class="date-label">{% if is_today %}📅 Today{% else %}📅 {{ selected_date|date:"l" }}{% endif %}</span>
+    <span class="date-value">{{ selected_date|date:"d M Y" }}</span>
+    <input type="date" id="date-picker" value="{{ selected_date|date:'Y-m-d' }}"
+      max="{{ today|date:'Y-m-d' }}"
+      onchange="window.location='/tracker/willpower/?date='+this.value"
+      class="date-picker-input" />
+  </div>
+  <a href="/tracker/willpower/?date={{ next_date }}" class="date-arrow">›</a>
+</div>
+
+<!-- ── Stats Bar ── -->
+<div class="stats-bar" style="margin-bottom:1.5rem;">
+  <div class="stat-card">
+    <span class="stat-label">⚡ WP Points Today</span>
+    <span class="stat-value" id="wp-points-value"
+      style="color:{% if wp_points > 0 %}var(--win-color){% elif wp_points < 0 %}var(--lose-color){% else %}var(--text-secondary){% endif %}">
+      {% if wp_points > 0 %}+{% endif %}{{ wp_points }}
+    </span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">✅ Completed</span>
+    <span class="stat-value" style="color:var(--win-color)" id="wp-completed-count">{{ completed.count }}</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">⏭ Skipped</span>
+    <span class="stat-value" style="color:var(--lose-color)" id="wp-skipped-count">{{ skipped.count }}</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">📋 Total</span>
+    <span class="stat-value" style="color:var(--accent)" id="wp-total-count">{{ tasks.count }}</span>
+  </div>
+</div>
+
+<!-- ── Info ── -->
+<div class="message message-info" style="margin-bottom:1.5rem;">
+  ⚡ <strong>Willpower Challenges</strong> — Complete = <strong style="color:var(--win-color)">+7 pts</strong> &nbsp;|&nbsp;
+  Skip = <strong style="color:var(--lose-color)">−7 pts</strong> &nbsp;|&nbsp;
+  Synced to daily total!
+</div>
+
+<!-- ── Task Table ── -->
+<div class="card">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+    <p class="card-title" style="margin:0;">⚡ Willpower Challenges</p>
+    <span style="font-size:0.85rem; color:var(--text-secondary)">{{ selected_date|date:"d M Y" }}</span>
+  </div>
+
+  <div class="table-wrapper">
+    <table class="task-table">
+      <thead>
+        <tr>
+          <th style="width:50%">Challenge</th>
+          <th style="width:12%; text-align:center;">Points</th>
+          <th style="width:13%; text-align:center;">Status</th>
+          <th style="width:25%; text-align:center;">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="wp-tbody">
+
+        <!-- Add row -->
+        <tr class="add-row" id="wp-add-row">
+          <td><input type="text" id="new-wp-title"
+            placeholder="+ Add challenge... (No sugar, No porn, Limited screen time)"
+            class="table-input" /></td>
+          <td style="text-align:center;"><span class="pts-badge pts-positive">+7</span></td>
+          <td style="text-align:center;"><span class="status-badge badge-pending">Pending</span></td>
+          <td style="text-align:center;">
+            <button type="button" class="btn btn-primary" id="add-wp-btn" style="padding:0.3rem 1.1rem; font-size:0.85rem;">Add ➕</button>
+          </td>
+        </tr>
+
+        {% for task in pending %}
+        <tr class="task-row" id="wptask-{{ task.id }}">
+          <td class="task-name">🎯 {{ task.title }}</td>
+          <td style="text-align:center;"><span class="pts-badge pts-positive">+7</span></td>
+          <td style="text-align:center;"><span class="status-badge badge-pending">Pending</span></td>
+          <td style="text-align:center;">
+            <div class="action-btns">
+              <a href="{% url 'complete_wp_task' task.id %}" class="btn-task btn-complete">✅ Done</a>
+              <a href="{% url 'skip_wp_task' task.id %}"    class="btn-task btn-skip">⏭ Skip</a>
+              <a href="{% url 'delete_wp_task' task.id %}"  class="btn-task btn-del"
+                onclick="return confirm('Delete?')">🗑</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+
+        {% for task in completed %}
+        <tr class="task-row task-done-row">
+          <td class="task-name" style="text-decoration:line-through; opacity:0.5;">✅ {{ task.title }}</td>
+          <td style="text-align:center;"><span class="pts-badge" style="background:#4cff9122;color:var(--win-color);">+7</span></td>
+          <td style="text-align:center;"><span class="status-badge badge-done">✅ Done</span></td>
+          <td style="text-align:center;"><a href="{% url 'undo_wp_task' task.id %}" class="btn-task btn-undo">↩ Undo</a></td>
+        </tr>
+        {% endfor %}
+
+        {% for task in skipped %}
+        <tr class="task-row task-skip-row">
+          <td class="task-name" style="opacity:0.4;">⏭ {{ task.title }}</td>
+          <td style="text-align:center;"><span class="pts-badge pts-negative">−7</span></td>
+          <td style="text-align:center;"><span class="status-badge badge-skip">⏭ Skipped</span></td>
+          <td style="text-align:center;"><a href="{% url 'undo_wp_task' task.id %}" class="btn-task btn-undo">↩ Undo</a></td>
+        </tr>
+        {% endfor %}
+
+        {% if not tasks %}
+        <tr id="wp-empty-row">
+          <td colspan="4" style="text-align:center; color:var(--text-secondary); padding:2.5rem;">
+            No challenges for this day — add one above! 💪
+          </td>
+        </tr>
+        {% endif %}
+
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const csrfToken = '{{ csrf_token }}';
+const WP_ADD_URL = "{% url 'willpower' %}";
+const WP_SELECTED_DATE = "{{ selected_date|date:'Y-m-d' }}";
+
+async function submitNewWpTask() {
+  const titleInput = document.getElementById('new-wp-title');
+  const addBtn      = document.getElementById('add-wp-btn');
+  const title = titleInput.value.trim();
+  if (!title) { titleInput.focus(); return; }
+
+  addBtn.disabled = true;
+
+  const body = new URLSearchParams();
+  body.set('action', 'add');
+  body.set('title', title);
+  body.set('selected_date', WP_SELECTED_DATE);
+
+  try {
+    const res = await fetch(WP_ADD_URL, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrfToken,
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body.toString(),
+    });
+    const data = await res.json();
+
+    if (!data.ok) {
+      alert(data.error || 'Could not add challenge.');
+      addBtn.disabled = false;
+      return;
+    }
+
+    const emptyRow = document.getElementById('wp-empty-row');
+    if (emptyRow) emptyRow.remove();
+
+    const tr = document.createElement('tr');
+    tr.className = 'task-row';
+    tr.id = `wptask-${data.task_id}`;
+    tr.style.opacity = '0';
+    tr.innerHTML = `
+      <td class="task-name">🎯 ${data.title}</td>
+      <td style="text-align:center;"><span class="pts-badge pts-positive">+7</span></td>
+      <td style="text-align:center;"><span class="status-badge badge-pending">Pending</span></td>
+      <td style="text-align:center;">
+        <div class="action-btns">
+          <a href="/tracker/willpower/complete/${data.task_id}/" class="btn-task btn-complete">✅ Done</a>
+          <a href="/tracker/willpower/skip/${data.task_id}/" class="btn-task btn-skip">⏭ Skip</a>
+          <a href="/tracker/willpower/delete/${data.task_id}/" class="btn-task btn-del" onclick="return confirm('Delete?')">🗑</a>
+        </div>
+      </td>
+    `;
+    document.getElementById('wp-add-row').after(tr);
+    requestAnimationFrame(() => { tr.style.transition = 'opacity 0.25s ease'; tr.style.opacity = '1'; });
+
+    titleInput.value = '';
+    titleInput.focus();
+
+    const wpPointsEl = document.getElementById('wp-points-value');
+    wpPointsEl.textContent = (data.wp_points > 0 ? '+' : '') + data.wp_points;
+    document.getElementById('wp-completed-count').textContent = data.completed_count;
+    document.getElementById('wp-skipped-count').textContent   = data.skipped_count;
+    document.getElementById('wp-total-count').textContent     = data.total_count;
+
+  } catch (err) {
+    alert('Something went wrong adding the challenge.');
+  } finally {
+    addBtn.disabled = false;
+  }
+}
+
+const addWpBtn = document.getElementById('add-wp-btn');
+if (addWpBtn) {
+  addWpBtn.addEventListener('click', submitNewWpTask);
+  const wpTitleInput = document.getElementById('new-wp-title');
+  wpTitleInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); submitNewWpTask(); }
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Boss Battle - Level {{ user_level }}{% endblock %}
+
+{% block content %}
+<div class="boss-battle">
+  <h1 class="boss-battle__heading">
+    {% if boss.boss_type == 'mini' %}⚔️ MINI BOSS
+    {% elif boss.level_number == 10 %}🏆 FINAL BOSS
+    {% else %}🐉 LEVEL BOSS{% endif %}
+  </h1>
+
+  <div class="boss-battle__grid">
+  <div class="boss-battle__main">
+
+  {% if fusion_names %}
+  <div class="boss-fusion" id="boss-fusion">
+    <p class="boss-fusion__label">Every weakness you've defeated converges...</p>
+    <div class="boss-fusion__orbs">
+      {% for fname in fusion_names %}
+        <span class="boss-fusion__orb" style="animation-delay: {{ forloop.counter0 }}00ms;">{{ fname }}</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="boss-card {% if fusion_names %}boss-card--fusion-wait{% endif %}" id="boss-card">
+    <button type="button" class="boss-info-btn" id="boss-info-btn" aria-label="Boss info">ⓘ</button>
+
+    <div class="boss-arena">
+      {% if boss.image %}
+        <img src="{{ boss.image.url }}" alt="{{ boss.name }}" class="boss-card__image" id="boss-image">
+      {% else %}
+        <div class="boss-monster" id="boss-image" aria-hidden="true">
+          <svg viewBox="0 0 200 200" class="boss-monster__svg">
+            <defs>
+              <radialGradient id="bossGlow" cx="50%" cy="45%" r="60%">
+                <stop offset="0%" stop-color="var(--lose-color)" stop-opacity="0.55"/>
+                <stop offset="100%" stop-color="var(--lose-color)" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <circle cx="100" cy="100" r="90" fill="url(#bossGlow)" class="boss-monster__aura"/>
+
+            {% if boss.level_number == 1 %}
+            <path class="boss-monster__body" d="M100 55 C65 55 45 80 42 115 C40 140 55 160 65 172 L85 158 L100 172 L115 158 L135 172 C145 160 160 140 158 115 C155 80 135 55 100 55 Z"/>
+            <path class="boss-monster__horn" d="M60 65 Q45 55 40 70 Q52 68 60 65 Z"/>
+            <path class="boss-monster__horn" d="M140 65 Q155 55 160 70 Q148 68 140 65 Z"/>
+            <ellipse class="boss-monster__eye" cx="80" cy="105" rx="9" ry="3"/>
+            <ellipse class="boss-monster__eye" cx="120" cy="105" rx="9" ry="3"/>
+            <path class="boss-monster__mouth" d="M78 132 Q100 128 122 132" fill="none" stroke="var(--lose-color)" stroke-width="3"/>
+            {% elif boss.level_number == 2 %}
+            <path class="boss-monster__body" d="M100 30 C62 30 38 58 38 98 C38 128 52 148 58 163 L72 150 L86 166 L100 148 L114 166 L128 150 L142 163 C148 148 162 128 162 98 C162 58 138 30 100 30 Z"/>
+            <path class="boss-monster__body" d="M100 30 L100 165" fill="none" stroke="var(--lose-color)" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.5"/>
+            <text x="60" y="45" class="boss-monster__mark" font-size="22">?</text>
+            <text x="128" y="55" class="boss-monster__mark" font-size="16" opacity="0.6">?</text>
+            <ellipse class="boss-monster__eye" cx="80" cy="98" rx="6" ry="10"/>
+            <ellipse class="boss-monster__eye" cx="122" cy="98" rx="10" ry="6"/>
+            <path class="boss-monster__mouth" d="M80 128 Q100 138 120 126" fill="none" stroke="var(--lose-color)" stroke-width="3"/>
+            {% elif boss.level_number == 3 %}
+            <path class="boss-monster__body" d="M100 40 C70 40 48 65 48 100 C48 125 60 145 65 160 L100 145 L135 160 C140 145 152 125 152 100 C152 65 130 40 100 40 Z"/>
+            <path class="boss-monster__horn" d="M48 70 L20 55 L45 90 Z"/>
+            <path class="boss-monster__horn" d="M152 70 L180 55 L155 90 Z"/>
+            <path class="boss-monster__horn" d="M65 45 L55 15 L78 38 Z"/>
+            <path class="boss-monster__horn" d="M135 45 L145 15 L122 38 Z"/>
+            <path class="boss-monster__eye" d="M68 98 L92 102 L68 106 Z"/>
+            <path class="boss-monster__eye" d="M132 98 L108 102 L132 106 Z"/>
+            <path class="boss-monster__mouth" d="M78 130 L86 140 L94 130 L102 140 L110 130 L118 140 L126 130" fill="none" stroke="var(--lose-color)" stroke-width="3"/>
+            {% elif boss.level_number == 4 %}
+            <circle class="boss-monster__body" cx="100" cy="105" r="65"/>
+            <path class="boss-monster__horn" d="M62 55 Q55 35 70 40 Q68 55 62 55 Z"/>
+            <path class="boss-monster__horn" d="M138 55 Q145 35 130 40 Q132 55 138 55 Z"/>
+            <circle class="boss-monster__eye" cx="75" cy="95" r="8"/>
+            <circle class="boss-monster__eye" cx="125" cy="95" r="8"/>
+            <ellipse class="boss-monster__mouth" cx="100" cy="130" rx="28" ry="18"/>
+            {% elif boss.level_number == 5 %}
+            <circle cx="100" cy="105" r="72" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-dasharray="3 5" opacity="0.6" class="boss-monster__aura"/>
+            <path class="boss-monster__body" d="M100 50 C68 50 48 75 48 108 C48 135 62 152 70 165 L100 152 L130 165 C138 152 152 135 152 108 C152 75 132 50 100 50 Z"/>
+            <path class="boss-monster__eye" d="M70 100 Q80 92 90 100" fill="none" stroke="var(--gold)" stroke-width="3"/>
+            <path class="boss-monster__eye" d="M110 100 Q120 92 130 100" fill="none" stroke="var(--gold)" stroke-width="3"/>
+            <text x="128" y="70" class="boss-monster__mark" font-size="14">z</text>
+            <text x="140" y="55" class="boss-monster__mark" font-size="18" opacity="0.7">Z</text>
+            <path class="boss-monster__mouth" d="M85 130 Q100 126 115 130" fill="none" stroke="var(--lose-color)" stroke-width="3"/>
+            {% elif boss.level_number == 6 %}
+            <path class="boss-monster__body" d="M100 35 C68 35 45 62 45 100 C45 128 58 148 64 162 L100 148 L136 162 C142 148 155 128 155 100 C155 62 132 35 100 35 Z"/>
+            <path class="boss-monster__horn" d="M70 40 L60 10 L85 35 Z"/>
+            <path class="boss-monster__horn" d="M100 30 L100 5 L115 28 Z"/>
+            <path class="boss-monster__horn" d="M130 40 L140 10 L115 35 Z"/>
+            <path class="boss-monster__eye" d="M62 82 L92 92" fill="none" stroke="var(--lose-color)" stroke-width="4"/>
+            <path class="boss-monster__eye" d="M138 82 L108 92" fill="none" stroke="var(--lose-color)" stroke-width="4"/>
+            <circle cx="78" cy="100" r="7" fill="var(--gold)"/>
+            <circle cx="122" cy="100" r="7" fill="var(--gold)"/>
+            <path class="boss-monster__mouth" d="M75 128 L83 138 L91 128 L99 138 L107 128 L115 138 L123 128" fill="none" stroke="var(--lose-color)" stroke-width="3"/>
+            {% elif boss.level_number == 7 %}
+            <path class="boss-monster__body" d="M100 55 C70 55 50 78 50 108 C50 132 62 150 68 162 L100 150 L132 162 C138 150 150 132 150 108 C150 78 130 55 100 55 Z"/>
+            <path class="boss-monster__horn" d="M65 55 L60 30 L75 48 L85 25 L100 48 L115 25 L125 48 L140 30 L135 55 Z"/>
+            <ellipse class="boss-monster__eye" cx="80" cy="100" rx="7" ry="9"/>
+            <ellipse class="boss-monster__eye" cx="120" cy="100" rx="7" ry="9"/>
+            <path class="boss-monster__mouth" d="M82 130 L118 130" fill="none" stroke="var(--gold)" stroke-width="3"/>
+            {% elif boss.level_number == 8 %}
+            <circle class="boss-monster__body" cx="100" cy="108" r="60"/>
+            <path class="boss-monster__horn" d="M45 90 L15 75 L20 100 L10 108 L35 118 Z"/>
+            <path class="boss-monster__horn" d="M155 90 L185 75 L180 100 L190 108 L165 118 Z"/>
+            <circle class="boss-monster__eye" cx="80" cy="98" r="9"/>
+            <circle class="boss-monster__eye" cx="120" cy="98" r="9"/>
+            <text x="74" y="103" font-size="10" fill="#1a0f18">$</text>
+            <text x="114" y="103" font-size="10" fill="#1a0f18">$</text>
+            <path class="boss-monster__mouth" d="M80 130 Q100 122 120 130" fill="none" stroke="var(--lose-color)" stroke-width="3"/>
+            {% elif boss.level_number == 9 %}
+            <path class="boss-monster__body" d="M92 45 C60 45 40 70 40 105 C40 130 52 148 58 160 L92 148 L92 160 C100 148 112 130 112 105 C112 70 92 45 92 45 Z" opacity="0.55" transform="translate(6,4)"/>
+            <path class="boss-monster__body" d="M100 45 C68 45 48 70 48 105 C48 130 60 148 66 160 L100 148 L134 160 C140 148 152 130 152 105 C152 70 132 45 100 45 Z"/>
+            <ellipse class="boss-monster__eye" cx="85" cy="98" rx="8" ry="6"/>
+            <ellipse class="boss-monster__eye" cx="122" cy="98" rx="8" ry="6"/>
+            <circle cx="88" cy="98" r="2.5" fill="#1a0f18"/>
+            <circle cx="125" cy="98" r="2.5" fill="#1a0f18"/>
+            <path class="boss-monster__mouth" d="M80 128 Q100 120 122 128" fill="none" stroke="var(--lose-color)" stroke-width="3"/>
+            {% elif boss.level_number == 10 %}
+            <path class="boss-monster__body" d="M100 25 C58 25 30 58 30 100 C30 132 46 155 53 172 L70 156 L88 176 L100 152 L112 176 L130 156 L147 172 C154 155 170 132 170 100 C170 58 142 25 100 25 Z"/>
+            <path class="boss-monster__horn" d="M45 45 L5 5 L48 35 Z"/>
+            <path class="boss-monster__horn" d="M155 45 L195 5 L152 35 Z"/>
+            <path class="boss-monster__horn" d="M100 20 L92 -5 L108 -5 Z"/>
+            <circle class="boss-monster__eye" cx="78" cy="92" r="10"/>
+            <circle class="boss-monster__eye" cx="122" cy="92" r="10"/>
+            <path class="boss-monster__mouth" d="M70 122 Q100 148 130 122 Q100 134 70 122 Z"/>
+            {% else %}
+            <path class="boss-monster__body" d="M100 30 C60 30 35 60 35 100 C35 130 50 150 55 165 L70 150 L85 168 L100 148 L115 168 L130 150 L145 165 C150 150 165 130 165 100 C165 60 140 30 100 30 Z"/>
+            <path class="boss-monster__horn" d="M55 55 L35 15 L65 45 Z"/>
+            <path class="boss-monster__horn" d="M145 55 L165 15 L135 45 Z"/>
+            <circle class="boss-monster__eye" cx="78" cy="95" r="9"/>
+            <circle class="boss-monster__eye" cx="122" cy="95" r="9"/>
+            <path class="boss-monster__mouth" d="M75 125 Q100 145 125 125 Q100 135 75 125 Z"/>
+            {% endif %}
+          </svg>
+        </div>
+      {% endif %}
+    </div>
+
+    <h2 class="boss-card__name">{{ boss.name }}</h2>
+    {% if boss.tagline %}
+      <p class="boss-card__tagline">"{{ boss.tagline }}"</p>
+    {% endif %}
+
+    <div class="boss-hp">
+      <div class="boss-hp__label">
+        <span>HP</span>
+        <span id="boss-hp-pct">{{ hp_pct }}%</span>
+      </div>
+      <div class="boss-hp__track">
+        <div class="boss-hp__fill" id="boss-hp-fill" style="width:{{ hp_pct }}%;"></div>
+      </div>
+    </div>
+  </div>
+
+  </div>
+  <div class="boss-battle__side">
+
+  {% if boss.lore %}
+  <div class="boss-info-modal" id="boss-info-modal">
+    <div class="boss-info-modal__box">
+      <button type="button" class="boss-info-modal__close" id="boss-info-close">✕</button>
+      <h3>{{ boss.name }}</h3>
+      <p>{{ boss.lore|linebreaksbr }}</p>
+    </div>
+  </div>
+  {% endif %}
+
+  <h3 class="boss-challenges__title">Challenges to defeat {{ boss.name }}:</h3>
+  <ul class="boss-challenge-list">
+    {% for cd in challenge_data %}
+      <li class="boss-challenge {% if cd.completed %}boss-challenge--done{% endif %}">
+        <span class="boss-challenge__badge-num">{{ cd.icon }}</span>
+        <span class="boss-challenge__text">{{ cd.challenge.description }}</span>
+        {% if cd.is_auto %}
+          <span class="boss-challenge__auto {% if cd.completed %}boss-challenge__auto--met{% endif %}">
+            {% if cd.completed %}✅{% else %}📊{% endif %} {{ cd.auto_label }}
+          </span>
+        {% elif cd.completed %}
+          <span class="boss-challenge__status">✅ Cleared</span>
+        {% else %}
+          <form method="post" action="{% url 'complete_challenge' cd.challenge.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn-complete">
+              <span class="btn-complete__icon">⚔️</span> Mark Complete
+            </button>
+          </form>
+        {% endif %}
+      </li>
+    {% empty %}
+      <li>No challenges set for this boss yet — contact your admin.</li>
+    {% endfor %}
+  </ul>
+
+  <form method="post" action="{% url 'defeat_boss' boss.id %}" id="defeat-form">
+    {% csrf_token %}
+    <button type="submit" class="btn-defeat" id="defeat-btn" {% if not all_done %}disabled{% endif %}>
+      {% if all_done %}⚔️ Strike the Final Blow{% else %}Complete all challenges first{% endif %}
+    </button>
+  </form>
+
+  </div>
+  </div>
+</div>
+
+<!-- ── Victory Cutscene (hidden until boss is defeated) ── -->
+<div class="cutscene-overlay" id="cutscene-overlay">
+  <div class="cutscene-flash" id="cutscene-flash"></div>
+  <div class="cutscene-particles" id="cutscene-particles">
+    <span></span><span></span><span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span><span></span><span></span>
+  </div>
+  <div class="cutscene-victory" id="cutscene-victory">
+    <div class="cutscene-victory__label">VICTORY</div>
+    <div class="cutscene-victory__boss">{{ boss.name }} DEFEATED</div>
+  </div>
+  <div class="cutscene-blackout" id="cutscene-blackout"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const csrfToken = '{{ csrf_token }}';
+
+// ── Info modal ──
+const infoBtn   = document.getElementById('boss-info-btn');
+const infoModal = document.getElementById('boss-info-modal');
+const infoClose = document.getElementById('boss-info-close');
+if (infoBtn && infoModal) {
+  infoBtn.addEventListener('click', () => infoModal.classList.add('boss-info-modal--open'));
+  infoClose.addEventListener('click', () => infoModal.classList.remove('boss-info-modal--open'));
+  infoModal.addEventListener('click', (e) => { if (e.target === infoModal) infoModal.classList.remove('boss-info-modal--open'); });
+}
+
+// ── LUST fusion intro: play once, then reveal the boss card ──
+const fusion = document.getElementById('boss-fusion');
+const card    = document.getElementById('boss-card');
+if (fusion && card) {
+  setTimeout(() => {
+    fusion.classList.add('boss-fusion--done');
+    card.classList.remove('boss-card--fusion-wait');
+  }, 2600);
+}
+
+// ── Defeat button: AJAX + full victory cutscene before redirect ──
+const defeatForm = document.getElementById('defeat-form');
+const defeatBtn   = document.getElementById('defeat-btn');
+if (defeatForm) {
+  defeatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (defeatBtn.disabled) return;
+    defeatBtn.disabled = true;
+    defeatBtn.textContent = 'Fighting...';
+
+    try {
+      const res = await fetch(defeatForm.action, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      const data = await res.json();
+
+      if (!data.ok) {
+        alert(data.error || 'Something went wrong.');
+        defeatBtn.disabled = false;
+        defeatBtn.textContent = '⚔️ Strike the Final Blow';
+        return;
+      }
+
+      // ── Cutscene sequence ──
+      const overlay   = document.getElementById('cutscene-overlay');
+      const flash     = document.getElementById('cutscene-flash');
+      const particles = document.getElementById('cutscene-particles');
+      const victory   = document.getElementById('cutscene-victory');
+      const blackout  = document.getElementById('cutscene-blackout');
+
+      // Stage 1: boss shakes & dissolves (0 - 900ms)
+      card.classList.add('boss-card--dying');
+      document.getElementById('boss-hp-fill').style.width = '0%';
+      document.getElementById('boss-hp-pct').textContent = '0%';
+
+      setTimeout(() => {
+        // Stage 2: full-screen flash + particle burst (900 - 1500ms)
+        overlay.classList.add('cutscene-overlay--active');
+        flash.classList.add('cutscene-flash--play');
+        particles.classList.add('cutscene-particles--play');
+      }, 850);
+
+      setTimeout(() => {
+        // Stage 3: VICTORY text reveal (1500 - 2400ms)
+        victory.classList.add('cutscene-victory--show');
+      }, 1500);
+
+      setTimeout(() => {
+        // Stage 4: blackout then redirect (2600 - 3100ms)
+        blackout.classList.add('cutscene-blackout--play');
+      }, 2600);
+
+      setTimeout(() => { window.location.href = data.redirect; }, 3100);
+
+    } catch (err) {
+      defeatBtn.disabled = false;
+      defeatBtn.textContent = '⚔️ Strike the Final Blow';
+    }
+  });
+}
+</script>
+{% endblock %}
