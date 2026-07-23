@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
-{% block title %}Willpower Tracker — Life Is Simulation{% endblock %}
+{% block title %}Willpower Tracker — EvolveX{% endblock %}
 
+{% block body_class %}theme-midnight{% endblock %}
 {% block content %}
 
 <!-- ── Date Navigation ── -->
@@ -84,31 +85,31 @@
           <td style="text-align:center;"><span class="pts-badge pts-positive">+7</span></td>
           <td style="text-align:center;"><span class="status-badge badge-pending">Pending</span></td>
           <td style="text-align:center;">
-            <div class="action-btns">
-              <a href="{% url 'complete_wp_task' task.id %}" class="btn-task btn-complete">✅ Done</a>
-              <a href="{% url 'skip_wp_task' task.id %}"    class="btn-task btn-skip">⏭ Skip</a>
-              <a href="{% url 'delete_wp_task' task.id %}"  class="btn-task btn-del"
-                onclick="return confirm('Delete?')">🗑</a>
+            <div class="task-action-circles">
+              <button class="task-circle task-circle--done" onclick="doWpTask({{ task.id }}, 'complete')" title="Mark done" aria-label="Mark done">✓</button>
+              <button class="task-circle task-circle--skip" onclick="doWpTask({{ task.id }}, 'skip')" title="Skip" aria-label="Skip">✕</button>
+              <a href="{% url 'delete_wp_task' task.id %}" class="task-circle task-circle--del"
+                onclick="return confirm('Delete?')" title="Delete" aria-label="Delete">🗑</a>
             </div>
           </td>
         </tr>
         {% endfor %}
 
         {% for task in completed %}
-        <tr class="task-row task-done-row">
+        <tr class="task-row task-done-row" id="wptask-{{ task.id }}">
           <td class="task-name" style="text-decoration:line-through; opacity:0.5;">✅ {{ task.title }}</td>
           <td style="text-align:center;"><span class="pts-badge" style="background:#4cff9122;color:var(--win-color);">+7</span></td>
           <td style="text-align:center;"><span class="status-badge badge-done">✅ Done</span></td>
-          <td style="text-align:center;"><a href="{% url 'undo_wp_task' task.id %}" class="btn-task btn-undo">↩ Undo</a></td>
+          <td style="text-align:center;"><button class="task-circle task-circle--undo" onclick="undoWpTask({{ task.id }})" title="Undo" aria-label="Undo">↩</button></td>
         </tr>
         {% endfor %}
 
         {% for task in skipped %}
-        <tr class="task-row task-skip-row">
+        <tr class="task-row task-skip-row" id="wptask-{{ task.id }}">
           <td class="task-name" style="opacity:0.4;">⏭ {{ task.title }}</td>
           <td style="text-align:center;"><span class="pts-badge pts-negative">−7</span></td>
           <td style="text-align:center;"><span class="status-badge badge-skip">⏭ Skipped</span></td>
-          <td style="text-align:center;"><a href="{% url 'undo_wp_task' task.id %}" class="btn-task btn-undo">↩ Undo</a></td>
+          <td style="text-align:center;"><button class="task-circle task-circle--undo" onclick="undoWpTask({{ task.id }})" title="Undo" aria-label="Undo">↩</button></td>
         </tr>
         {% endfor %}
 
@@ -176,10 +177,10 @@ async function submitNewWpTask() {
       <td style="text-align:center;"><span class="pts-badge pts-positive">+7</span></td>
       <td style="text-align:center;"><span class="status-badge badge-pending">Pending</span></td>
       <td style="text-align:center;">
-        <div class="action-btns">
-          <a href="/tracker/willpower/complete/${data.task_id}/" class="btn-task btn-complete">✅ Done</a>
-          <a href="/tracker/willpower/skip/${data.task_id}/" class="btn-task btn-skip">⏭ Skip</a>
-          <a href="/tracker/willpower/delete/${data.task_id}/" class="btn-task btn-del" onclick="return confirm('Delete?')">🗑</a>
+        <div class="task-action-circles">
+          <button class="task-circle task-circle--done" onclick="doWpTask(${data.task_id}, 'complete')" title="Mark done" aria-label="Mark done">✓</button>
+          <button class="task-circle task-circle--skip" onclick="doWpTask(${data.task_id}, 'skip')" title="Skip" aria-label="Skip">✕</button>
+          <a href="/tracker/willpower/delete/${data.task_id}/" class="task-circle task-circle--del" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete">🗑</a>
         </div>
       </td>
     `;
@@ -189,17 +190,96 @@ async function submitNewWpTask() {
     titleInput.value = '';
     titleInput.focus();
 
-    const wpPointsEl = document.getElementById('wp-points-value');
-    wpPointsEl.textContent = (data.wp_points > 0 ? '+' : '') + data.wp_points;
-    document.getElementById('wp-completed-count').textContent = data.completed_count;
-    document.getElementById('wp-skipped-count').textContent   = data.skipped_count;
-    document.getElementById('wp-total-count').textContent     = data.total_count;
+    updateWpStats(data);
 
   } catch (err) {
     alert('Something went wrong adding the challenge.');
   } finally {
     addBtn.disabled = false;
   }
+}
+
+function updateWpStats(data) {
+  const wpPointsEl = document.getElementById('wp-points-value');
+  wpPointsEl.textContent = (data.wp_points > 0 ? '+' : '') + data.wp_points;
+  wpPointsEl.style.color = data.wp_points > 0 ? 'var(--win-color)' : data.wp_points < 0 ? 'var(--lose-color)' : 'var(--text-secondary)';
+  document.getElementById('wp-completed-count').textContent = data.completed_count;
+  document.getElementById('wp-skipped-count').textContent   = data.skipped_count;
+  document.getElementById('wp-total-count').textContent     = data.total_count;
+}
+
+async function doWpTask(taskId, action) {
+  const url = action === 'complete'
+    ? `/tracker/willpower/complete/${taskId}/`
+    : `/tracker/willpower/skip/${taskId}/`;
+
+  const res  = await fetch(url, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest' },
+  });
+  const data = await res.json();
+  if (!data.ok) return;
+
+  const row = document.getElementById(`wptask-${taskId}`);
+  if (row) {
+    const isDone = action === 'complete';
+    row.classList.add(isDone ? 'task-done-row' : 'task-skip-row');
+
+    const nameCell = row.children[0];
+    if (nameCell) {
+      nameCell.textContent = (isDone ? '✅ ' : '⏭ ') + nameCell.textContent.replace(/^🎯\s*/, '');
+      nameCell.style.textDecoration = isDone ? 'line-through' : 'none';
+      nameCell.style.opacity = isDone ? '0.5' : '0.4';
+    }
+    const ptsCell = row.children[1];
+    if (ptsCell) ptsCell.innerHTML = isDone
+      ? '<span class="pts-badge" style="background:#4cff9122;color:var(--win-color);">+7</span>'
+      : '<span class="pts-badge pts-negative">−7</span>';
+
+    const statusCell = row.children[2];
+    if (statusCell) statusCell.innerHTML = isDone
+      ? '<span class="status-badge badge-done">✅ Done</span>'
+      : '<span class="status-badge badge-skip">⏭ Skipped</span>';
+
+    const actionCell = row.children[3];
+    if (actionCell) actionCell.innerHTML =
+      `<button class="task-circle task-circle--undo" onclick="undoWpTask(${taskId})" title="Undo" aria-label="Undo">↩</button>`;
+  }
+
+  updateWpStats(data);
+}
+
+async function undoWpTask(taskId) {
+  const res = await fetch(`/tracker/willpower/undo/${taskId}/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest' },
+  });
+  const data = await res.json();
+  if (!data.ok) return;
+
+  const row = document.getElementById(`wptask-${taskId}`);
+  if (row) {
+    row.classList.remove('task-done-row', 'task-skip-row');
+    const nameCell = row.children[0];
+    if (nameCell) {
+      nameCell.textContent = '🎯 ' + nameCell.textContent.replace(/^(✅|⏭)\s*/, '');
+      nameCell.style.textDecoration = 'none';
+      nameCell.style.opacity = '1';
+    }
+    const ptsCell = row.children[1];
+    if (ptsCell) ptsCell.innerHTML = '<span class="pts-badge pts-positive">+7</span>';
+    const statusCell = row.children[2];
+    if (statusCell) statusCell.innerHTML = '<span class="status-badge badge-pending">Pending</span>';
+    const actionCell = row.children[3];
+    if (actionCell) actionCell.innerHTML = `
+      <div class="task-action-circles">
+        <button class="task-circle task-circle--done" onclick="doWpTask(${taskId}, 'complete')" title="Mark done" aria-label="Mark done">✓</button>
+        <button class="task-circle task-circle--skip" onclick="doWpTask(${taskId}, 'skip')" title="Skip" aria-label="Skip">✕</button>
+        <a href="/tracker/willpower/delete/${taskId}/" class="task-circle task-circle--del" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete">🗑</a>
+      </div>`;
+  }
+
+  updateWpStats(data);
 }
 
 const addWpBtn = document.getElementById('add-wp-btn');

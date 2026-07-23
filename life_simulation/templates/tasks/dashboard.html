@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
-{% block title %}Dashboard — Life Is Simulation{% endblock %}
+{% block title %}Dashboard — EvolveX{% endblock %}
 
+{% block body_class %}theme-eclipse{% endblock %}
 {% block content %}
 
 {% if level_up_popup %}
@@ -122,7 +123,7 @@
   </div>
   <div class="stat-card">
     <span class="stat-label">Tasks Done</span>
-    <span class="stat-value" style="color:var(--accent)">{{ completed.count }} / {{ tasks.count }}</span>
+    <span class="stat-value" style="color:var(--accent)" id="tasks-done-count">{{ completed.count }} / {{ tasks.count }}</span>
   </div>
 </div>
 
@@ -197,19 +198,19 @@
 
         <!-- Pending tasks -->
         {% for task in pending %}
-        <tr class="task-row" id="task-{{ task.id }}">
+        <tr class="task-row" id="task-{{ task.id }}" data-points="{{ task.get_points }}">
           <td class="task-name">{{ task.title }}</td>
           <td style="text-align:center;"><span class="stars-cell">{{ task.stars }}</span></td>
           <td style="text-align:center;"><span class="pts-badge pts-positive">+{{ task.get_points }}</span></td>
           <td style="text-align:center;"><span class="status-badge badge-pending">Pending</span></td>
           <td style="text-align:center;">
-            <div class="action-btns">
+            <div class="task-action-circles">
               {% if is_today %}
-                <button class="btn-task btn-complete" onclick="doTask({{ task.id }}, 'complete')">✅ Done</button>
-                <button class="btn-task btn-skip"     onclick="doTask({{ task.id }}, 'skip')">⏭ Skip</button>
-                <a href="{% url 'delete_task' task.id %}" class="btn-task btn-del" onclick="return confirm('Delete?')">🗑</a>
+                <button class="task-circle task-circle--done" onclick="doTask({{ task.id }}, 'complete')" title="Mark done" aria-label="Mark done">✓</button>
+                <button class="task-circle task-circle--skip" onclick="doTask({{ task.id }}, 'skip')" title="Skip" aria-label="Skip">✕</button>
+                <a href="{% url 'delete_task' task.id %}" class="task-circle task-circle--del" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete">🗑</a>
               {% elif selected_date > today %}
-                <a href="{% url 'delete_task' task.id %}" class="btn-task btn-del" onclick="return confirm('Delete?')">🗑</a>
+                <a href="{% url 'delete_task' task.id %}" class="task-circle task-circle--del" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete">🗑</a>
               {% else %}
                 <span style="font-size:0.78rem;color:var(--text-secondary);">Read only</span>
               {% endif %}
@@ -220,14 +221,14 @@
 
         <!-- Completed tasks -->
         {% for task in completed %}
-        <tr class="task-row task-done-row">
+        <tr class="task-row task-done-row" id="task-{{ task.id }}" data-points="{{ task.get_points }}">
           <td class="task-name" style="text-decoration:line-through; opacity:0.5;">{{ task.title }}</td>
           <td style="text-align:center; opacity:0.5;"><span class="stars-cell">{{ task.stars }}</span></td>
           <td style="text-align:center;"><span class="pts-badge" style="background:#4cff9122;color:var(--win-color);">+{{ task.get_points }}</span></td>
           <td style="text-align:center;"><span class="status-badge badge-done">✅ Done</span></td>
           <td style="text-align:center;">
             {% if is_today %}
-              <a href="{% url 'undo_task' task.id %}" class="btn-task btn-undo">↩ Undo</a>
+              <button class="task-circle task-circle--undo" onclick="undoTask({{ task.id }})" title="Undo" aria-label="Undo">↩</button>
             {% else %}
               <span style="font-size:0.78rem;color:var(--text-secondary);">—</span>
             {% endif %}
@@ -237,14 +238,14 @@
 
         <!-- Skipped tasks -->
         {% for task in skipped %}
-        <tr class="task-row task-skip-row">
+        <tr class="task-row task-skip-row" id="task-{{ task.id }}" data-points="{{ task.get_points }}">
           <td class="task-name" style="opacity:0.4;">{{ task.title }}</td>
           <td style="text-align:center; opacity:0.4;"><span class="stars-cell">{{ task.stars }}</span></td>
           <td style="text-align:center;"><span class="pts-badge pts-negative">−3</span></td>
           <td style="text-align:center;"><span class="status-badge badge-skip">⏭ Skipped</span></td>
           <td style="text-align:center;">
             {% if is_today %}
-              <a href="{% url 'undo_task' task.id %}" class="btn-task btn-undo">↩ Undo</a>
+              <button class="task-circle task-circle--undo" onclick="undoTask({{ task.id }})" title="Undo" aria-label="Undo">↩</button>
             {% else %}
               <span style="font-size:0.78rem;color:var(--text-secondary);">—</span>
             {% endif %}
@@ -316,13 +317,13 @@ function buildTaskRow(t) {
   let actions;
   if (IS_TODAY) {
     actions = `
-      <div class="action-btns">
-        <button class="btn-task btn-complete" onclick="doTask(${t.task_id}, 'complete')">✅ Done</button>
-        <button class="btn-task btn-skip" onclick="doTask(${t.task_id}, 'skip')">⏭ Skip</button>
-        <a href="/dashboard/delete/${t.task_id}/" class="btn-task btn-del" onclick="return confirm('Delete?')">🗑</a>
+      <div class="task-action-circles">
+        <button class="task-circle task-circle--done" onclick="doTask(${t.task_id}, 'complete')" title="Mark done" aria-label="Mark done">✓</button>
+        <button class="task-circle task-circle--skip" onclick="doTask(${t.task_id}, 'skip')" title="Skip" aria-label="Skip">✕</button>
+        <a href="/dashboard/delete/${t.task_id}/" class="task-circle task-circle--del" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete">🗑</a>
       </div>`;
   } else if (IS_FUTURE) {
-    actions = `<a href="/dashboard/delete/${t.task_id}/" class="btn-task btn-del" onclick="return confirm('Delete?')">🗑</a>`;
+    actions = `<a href="/dashboard/delete/${t.task_id}/" class="task-circle task-circle--del" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete">🗑</a>`;
   } else {
     actions = `<span style="font-size:0.78rem;color:var(--text-secondary);">Read only</span>`;
   }
@@ -330,6 +331,7 @@ function buildTaskRow(t) {
   const tr = document.createElement('tr');
   tr.className = 'task-row';
   tr.id = `task-${t.task_id}`;
+  tr.dataset.points = t.points;
   tr.innerHTML = `
     <td class="task-name">${t.title}</td>
     <td style="text-align:center;"><span class="stars-cell">${starsFor(t.priority)}</span></td>
@@ -438,10 +440,80 @@ async function doTask(taskId, action) {
   const data = await res.json();
 
   const row = document.getElementById(`task-${taskId}`);
-  if (row) { row.style.opacity = '0'; setTimeout(() => location.reload(), 300); }
+  if (row) {
+    const isDone = action === 'complete';
+    row.classList.add(isDone ? 'task-done-row' : 'task-skip-row');
 
+    const nameCell = row.children[0];
+    if (nameCell) {
+      nameCell.style.textDecoration = isDone ? 'line-through' : 'none';
+      nameCell.style.opacity = isDone ? '0.5' : '0.4';
+    }
+    const starsCell = row.children[1];
+    if (starsCell) starsCell.style.opacity = isDone ? '0.5' : '0.4';
+
+    const ptsCell = row.children[2];
+    if (ptsCell) {
+      ptsCell.innerHTML = isDone
+        ? `<span class="pts-badge" style="background:#4cff9122;color:var(--win-color);">+${data.earned ?? ''}</span>`
+        : `<span class="pts-badge pts-negative">−${data.deducted ?? 3}</span>`;
+    }
+    const statusCell = row.children[3];
+    if (statusCell) statusCell.innerHTML = isDone
+      ? '<span class="status-badge badge-done">✅ Done</span>'
+      : '<span class="status-badge badge-skip">⏭ Skipped</span>';
+
+    const actionCell = row.children[4];
+    if (actionCell) actionCell.innerHTML =
+      `<button class="task-circle task-circle--undo" onclick="undoTask(${taskId})" title="Undo" aria-label="Undo">↩</button>`;
+  }
+
+  updateDashboardStats(data);
+}
+
+async function undoTask(taskId) {
+  const res = await fetch(`/dashboard/undo/${taskId}/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest' }
+  });
+  const data = await res.json();
+
+  // Simplest reliable way to get the row back into "pending" shape with the
+  // right action buttons/state is to re-render from the dashboard — but to
+  // avoid a full reload we just rebuild this one row in place.
+  const row = document.getElementById(`task-${taskId}`);
+  if (row) {
+    row.classList.remove('task-done-row', 'task-skip-row');
+    const nameCell = row.children[0];
+    if (nameCell) { nameCell.style.textDecoration = 'none'; nameCell.style.opacity = '1'; }
+    const starsCell = row.children[1];
+    if (starsCell) starsCell.style.opacity = '1';
+    const ptsCell = row.children[2];
+    if (ptsCell) ptsCell.innerHTML = `<span class="pts-badge pts-positive">+${row.dataset.points}</span>`;
+    const statusCell = row.children[3];
+    if (statusCell) statusCell.innerHTML = '<span class="status-badge badge-pending">Pending</span>';
+    const actionCell = row.children[4];
+    if (actionCell) actionCell.innerHTML = `
+      <div class="task-action-circles">
+        <button class="task-circle task-circle--done" onclick="doTask(${taskId}, 'complete')" title="Mark done" aria-label="Mark done">✓</button>
+        <button class="task-circle task-circle--skip" onclick="doTask(${taskId}, 'skip')" title="Skip" aria-label="Skip">✕</button>
+        <a href="/dashboard/delete/${taskId}/" class="task-circle task-circle--del" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete">🗑</a>
+      </div>`;
+  }
+
+  updateDashboardStats(data);
+}
+
+function updateDashboardStats(data) {
   document.getElementById('total-points').textContent = data.points;
   document.getElementById('streak').textContent = data.streak + ' days';
+
+  const doneCountEl = document.getElementById('tasks-done-count');
+  if (doneCountEl) {
+    const allRows  = document.querySelectorAll('.task-row').length;
+    const doneRows = document.querySelectorAll('.task-done-row').length;
+    doneCountEl.textContent = `${doneRows} / ${allRows}`;
+  }
 
   const map = {
     win:     { text: '🏆 WIN',     cls: 'status-win' },

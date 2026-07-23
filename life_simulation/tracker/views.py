@@ -97,6 +97,21 @@ def willpower(request):
     return render(request, 'tracker/willpower.html', context)
 
 
+def _wp_stats(user, log_date):
+    tasks_qs = WillpowerTask.objects.filter(user=user, due_date=log_date)
+    wp_points = sum(
+        WILLPOWER_POINTS if t.status == 'completed' else
+        -WILLPOWER_DEDUCT if t.status == 'skipped' else 0
+        for t in tasks_qs
+    )
+    return {
+        'wp_points':       wp_points,
+        'completed_count': tasks_qs.filter(status='completed').count(),
+        'skipped_count':   tasks_qs.filter(status='skipped').count(),
+        'total_count':     tasks_qs.count(),
+    }
+
+
 @login_required
 def complete_wp_task(request, task_id):
     task = get_object_or_404(WillpowerTask, id=task_id, user=request.user)
@@ -104,6 +119,8 @@ def complete_wp_task(request, task_id):
         task.status = 'completed'
         task.save()
         sync_willpower_to_daily(request.user, task.due_date)
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'ok': True, **_wp_stats(request.user, task.due_date)})
     return redirect(f'/tracker/willpower/?date={task.due_date}')
 
 
@@ -114,6 +131,8 @@ def skip_wp_task(request, task_id):
         task.status = 'skipped'
         task.save()
         sync_willpower_to_daily(request.user, task.due_date)
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'ok': True, **_wp_stats(request.user, task.due_date)})
     return redirect(f'/tracker/willpower/?date={task.due_date}')
 
 
@@ -123,6 +142,8 @@ def delete_wp_task(request, task_id):
     due_date = task.due_date
     task.delete()
     sync_willpower_to_daily(request.user, due_date)
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'ok': True, **_wp_stats(request.user, due_date)})
     messages.success(request, 'Challenge deleted.')
     return redirect(f'/tracker/willpower/?date={due_date}')
 
@@ -134,6 +155,8 @@ def undo_wp_task(request, task_id):
         task.status = 'pending'
         task.save()
         sync_willpower_to_daily(request.user, task.due_date)
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'ok': True, **_wp_stats(request.user, task.due_date)})
     return redirect(f'/tracker/willpower/?date={task.due_date}')
 
 

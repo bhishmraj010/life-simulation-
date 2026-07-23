@@ -280,7 +280,15 @@ def undo_task(request, task_id):
     if task.status != 'pending':
         task.status = 'pending'
         task.save()
-        recalculate_daily_points(request.user, task.due_date)
+        log = recalculate_daily_points(request.user, task.due_date)
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'status':     'pending',
+                'points':     log.total_points,
+                'day_status': log.day_status,
+                'streak':     log.streak,
+                'win_pts':    log.win_threshold,
+            })
     return redirect(f'/dashboard/?date={task.due_date.isoformat()}')
 
 

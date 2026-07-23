@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="boss-battle">
-  <h1 class="boss-battle__heading">
+  <h1 class="boss-battle__heading neon-glow">
     {% if boss.boss_type == 'mini' %}⚔️ MINI BOSS
     {% elif boss.level_number == 10 %}🏆 FINAL BOSS
     {% else %}🐉 LEVEL BOSS{% endif %}
@@ -30,7 +30,25 @@
 
     <div class="boss-arena">
       {% if boss.image %}
-        <img src="{{ boss.image.url }}" alt="{{ boss.name }}" class="boss-card__image" id="boss-image">
+        <img src="{{ boss.image.url }}" alt="{{ boss.name }}" class="boss-card__image" id="boss-image"
+             onerror="this.style.display='none'; document.getElementById('boss-image-fallback').style.display='block';">
+        <div class="boss-monster" id="boss-image-fallback" style="display:none;" aria-hidden="true">
+          <svg viewBox="0 0 200 200" class="boss-monster__svg">
+            <defs>
+              <radialGradient id="bossGlow" cx="50%" cy="45%" r="60%">
+                <stop offset="0%" stop-color="var(--lose-color)" stop-opacity="0.55"/>
+                <stop offset="100%" stop-color="var(--lose-color)" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <circle cx="100" cy="100" r="90" fill="url(#bossGlow)" class="boss-monster__aura"/>
+            <path class="boss-monster__body" d="M100 30 C60 30 35 60 35 100 C35 130 50 150 55 165 L70 150 L85 168 L100 148 L115 168 L130 150 L145 165 C150 150 165 130 165 100 C165 60 140 30 100 30 Z"/>
+            <path class="boss-monster__horn" d="M55 55 L35 15 L65 45 Z"/>
+            <path class="boss-monster__horn" d="M145 55 L165 15 L135 45 Z"/>
+            <circle class="boss-monster__eye" cx="78" cy="95" r="9"/>
+            <circle class="boss-monster__eye" cx="122" cy="95" r="9"/>
+            <path class="boss-monster__mouth" d="M75 125 Q100 145 125 125 Q100 135 75 125 Z"/>
+          </svg>
+        </div>
       {% else %}
         <div class="boss-monster" id="boss-image" aria-hidden="true">
           <svg viewBox="0 0 200 200" class="boss-monster__svg">
@@ -177,7 +195,7 @@
         {% elif cd.completed %}
           <span class="boss-challenge__status">✅ Cleared</span>
         {% else %}
-          <form method="post" action="{% url 'complete_challenge' cd.challenge.id %}">
+          <form method="post" action="{% url 'complete_challenge' cd.challenge.id %}" class="challenge-complete-form">
             {% csrf_token %}
             <button type="submit" class="btn-complete">
               <span class="btn-complete__icon">⚔️</span> Mark Complete
@@ -204,6 +222,8 @@
 <!-- ── Victory Cutscene (hidden until boss is defeated) ── -->
 <div class="cutscene-overlay" id="cutscene-overlay">
   <div class="cutscene-flash" id="cutscene-flash"></div>
+  <div class="cutscene-shockwave" id="cutscene-shockwave-1"></div>
+  <div class="cutscene-shockwave" id="cutscene-shockwave-2"></div>
   <div class="cutscene-particles" id="cutscene-particles">
     <span></span><span></span><span></span><span></span><span></span><span></span>
     <span></span><span></span><span></span><span></span><span></span><span></span>
@@ -240,6 +260,44 @@ if (fusion && card) {
   }, 2600);
 }
 
+// ── Challenge "Mark Complete": XP burst + combo toast + screen shake, then submit ──
+document.querySelectorAll('.challenge-complete-form').forEach(form => {
+  form.addEventListener('submit', function (e) {
+    const btn = form.querySelector('.btn-complete');
+    if (btn.dataset.firing) { return; } // already animating, let it go through
+    e.preventDefault();
+    btn.dataset.firing = '1';
+    btn.disabled = true;
+
+    const li = form.closest('.boss-challenge');
+
+    // Screen shake — a satisfying little "hit" on the whole page
+    document.body.classList.add('screen-shake');
+    setTimeout(() => document.body.classList.remove('screen-shake'), 500);
+
+    // XP burst rays radiating from the challenge row
+    const burst = document.createElement('div');
+    burst.className = 'xp-burst';
+    for (let i = 0; i < 10; i++) {
+      const ray = document.createElement('span');
+      ray.style.setProperty('--ang', (i * 36) + 'deg');
+      ray.style.animationDelay = (i * 12) + 'ms';
+      burst.appendChild(ray);
+    }
+    li.appendChild(burst);
+
+    // "+1 CHALLENGE CLEARED" combo toast
+    const toast = document.createElement('div');
+    toast.className = 'combo-toast';
+    toast.textContent = '⚡ CLEARED';
+    li.appendChild(toast);
+
+    li.classList.add('boss-challenge--done');
+
+    setTimeout(() => { btn.textContent = 'Cleared ✅'; form.submit(); }, 420);
+  });
+});
+
 // ── Defeat button: AJAX + full victory cutscene before redirect ──
 const defeatForm = document.getElementById('defeat-form');
 const defeatBtn   = document.getElementById('defeat-btn');
@@ -273,14 +331,20 @@ if (defeatForm) {
 
       // Stage 1: boss shakes & dissolves (0 - 900ms)
       card.classList.add('boss-card--dying');
+      document.body.classList.add('screen-shake');
       document.getElementById('boss-hp-fill').style.width = '0%';
       document.getElementById('boss-hp-pct').textContent = '0%';
+      setTimeout(() => document.body.classList.remove('screen-shake'), 500);
 
       setTimeout(() => {
-        // Stage 2: full-screen flash + particle burst (900 - 1500ms)
+        // Stage 2: full-screen flash + shockwave rings + particle burst (900 - 1500ms)
         overlay.classList.add('cutscene-overlay--active');
         flash.classList.add('cutscene-flash--play');
         particles.classList.add('cutscene-particles--play');
+        const sw1 = document.getElementById('cutscene-shockwave-1');
+        const sw2 = document.getElementById('cutscene-shockwave-2');
+        sw1.classList.add('cutscene-shockwave--play');
+        setTimeout(() => sw2.classList.add('cutscene-shockwave--play'), 180);
       }, 850);
 
       setTimeout(() => {

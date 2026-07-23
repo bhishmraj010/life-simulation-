@@ -3,17 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{% block title %}Life Is Simulation{% endblock %}</title>
+  <title>{% block title %}EvolveX{% endblock %}</title>
   {% load static %}
-  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  <link rel="stylesheet" href="{% static 'css/main.css' %}?v=10">
   {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
+
+<div class="aurora-bg" aria-hidden="true"><span></span></div>
+<div class="particle-field" id="particleField"></div>
 
 {% if user.is_authenticated %}
 <nav class="navbar">
-  <a href="{% url 'dashboard' %}" class="nav-brand">⚔️ Life Is Simulation</a>
-  <div class="nav-links">
+  <a href="{% url 'dashboard' %}" class="nav-brand">⚔️ EvolveX</a>
+  <button type="button" class="nav-hamburger" id="navHamburger" aria-label="Toggle menu" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="nav-links" id="navLinks">
     <a href="{% url 'dashboard' %}">🏠 Dashboard</a>
     <a href="{% url 'willpower' %}">⚡ Willpower</a>
     <a href="{% url 'diet' %}">🥗 Diet</a>
@@ -39,5 +45,142 @@
 </main>
 
 {% block extra_scripts %}{% endblock %}
+
+<script>
+  // ── Floating particle background (purple/pink/cyan glowing dots) ─────────
+  (function () {
+    const field = document.getElementById('particleField');
+    if (!field) return;
+    const style = getComputedStyle(document.body);
+    const themeAccent = style.getPropertyValue('--accent').trim() || '#8b5cf6';
+    const themeCyan   = style.getPropertyValue('--grad-cyan').trim() || '#22d3ee';
+    const colors = ['#ffffff', themeCyan, themeAccent];
+    const count = window.innerWidth < 600 ? 18 : 34;
+    for (let i = 0; i < count; i++) {
+      const dot = document.createElement('span');
+      dot.style.setProperty('--x', Math.random() * 100 + '%');
+      dot.style.setProperty('--y', Math.random() * 100 + '%');
+      dot.style.setProperty('--size', (Math.random() * 2.5 + 1.5).toFixed(1) + 'px');
+      dot.style.setProperty('--pcolor', colors[i % colors.length]);
+      dot.style.setProperty('--opac', (Math.random() * 0.35 + 0.25).toFixed(2));
+      dot.style.setProperty('--dur', (Math.random() * 10 + 10).toFixed(1) + 's');
+      dot.style.setProperty('--delay', (Math.random() * 6).toFixed(1) + 's');
+      dot.style.setProperty('--dx', (Math.random() * 40 - 20).toFixed(0) + 'px');
+      dot.style.setProperty('--dy', (Math.random() * 40 - 20).toFixed(0) + 'px');
+      field.appendChild(dot);
+    }
+  })();
+</script>
+
+<script>
+  // ── Global ripple click effect ────────────────────────────────────────────
+  document.addEventListener('click', function (e) {
+    const el = e.target.closest(
+      '.btn, .btn-task, .btn-complete, .range-pill, .date-arrow, .stat-card, .card, .task-row, .boss-challenge'
+    );
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const ripple = document.createElement('span');
+    ripple.className = 'ripple';
+    ripple.style.left = (e.clientX - rect.left) + 'px';
+    ripple.style.top  = (e.clientY - rect.top) + 'px';
+    el.appendChild(ripple);
+    ripple.addEventListener('animationend', () => ripple.remove());
+  });
+
+  // ── Site-wide staggered entrance for cards/rows ───────────────────────────
+  document.querySelectorAll('.card, .stat-card, .task-row, .boss-challenge').forEach((el, i) => {
+    el.style.setProperty('--i', i % 12);
+  });
+
+  // ── Site-wide number count-up (Points, Streak, kcal badges, etc.) ─────────
+  function animateCountUp(el, target, duration = 900) {
+    const isFloat = !Number.isInteger(target);
+    const start = performance.now();
+    function ease(t) { return t === 1 ? 1 : 1 - Math.pow(2, -10 * t); }
+    function tick(now) {
+      const p = Math.min((now - start) / duration, 1);
+      const cur = target * ease(p);
+      el.textContent = isFloat ? cur.toFixed(1) : Math.round(cur);
+      if (p < 1) requestAnimationFrame(tick);
+      else el.textContent = isFloat ? target.toFixed(1) : target;
+    }
+    requestAnimationFrame(tick);
+  }
+  document.querySelectorAll('.stat-value, .willpower-display, .pts-badge').forEach((el, i) => {
+    const raw = el.textContent.trim();
+    if (/^-?\d+(\.\d+)?$/.test(raw)) {
+      const target = parseFloat(raw);
+      el.textContent = '0';
+      setTimeout(() => animateCountUp(el, target), 200 + i * 60);
+    }
+  });
+
+  // ── Subtle 3D tilt on card hover (desktop only) ───────────────────────────
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    document.querySelectorAll('.card').forEach(card => {
+      card.addEventListener('mousemove', (e) => {
+        const rect = card.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width - 0.5;
+        const y = (e.clientY - rect.top) / rect.height - 0.5;
+        card.style.setProperty('--rx', (x * 4).toFixed(2) + 'deg');
+        card.style.setProperty('--ry', (-y * 4).toFixed(2) + 'deg');
+        card.classList.add('tilt-active');
+      });
+      card.addEventListener('mouseleave', () => {
+        card.classList.remove('tilt-active');
+        card.style.setProperty('--rx', '0deg');
+        card.style.setProperty('--ry', '0deg');
+      });
+    });
+  }
+
+  // ── Border-beam: chasing light ribbon on cards & the boss card ────────────
+  document.querySelectorAll('.card, .boss-card, .level-card').forEach(el => {
+    el.classList.add('border-beam');
+  });
+
+  // ── Magnetic buttons: primary/gold/defeat buttons gently follow the cursor ─
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    document.querySelectorAll('.btn-primary, .btn-gold, .btn-defeat, .btn-complete, .nav-brand').forEach(btn => {
+      btn.classList.add('magnetic');
+      btn.addEventListener('mousemove', (e) => {
+        const rect = btn.getBoundingClientRect();
+        const mx = (e.clientX - rect.left - rect.width / 2) * 0.25;
+        const my = (e.clientY - rect.top - rect.height / 2) * 0.25;
+        btn.style.setProperty('--mx', mx.toFixed(1) + 'px');
+        btn.style.setProperty('--my', my.toFixed(1) + 'px');
+      });
+      btn.addEventListener('mouseleave', () => {
+        btn.style.setProperty('--mx', '0px');
+        btn.style.setProperty('--my', '0px');
+      });
+    });
+  }
+
+  // ── Shine sweep on primary/gold buttons ────────────────────────────────────
+  document.querySelectorAll('.btn-primary, .btn-gold, .btn-defeat').forEach(el => {
+    el.classList.add('shine-effect');
+  });
+
+  // ── Mobile hamburger menu toggle ───────────────────────────────────────────
+  (function () {
+    const btn = document.getElementById('navHamburger');
+    const links = document.getElementById('navLinks');
+    if (!btn || !links) return;
+    btn.addEventListener('click', () => {
+      const open = links.classList.toggle('nav-links--open');
+      btn.classList.toggle('nav-hamburger--active', open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    links.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', () => {
+        links.classList.remove('nav-links--open');
+        btn.classList.remove('nav-hamburger--active');
+        btn.setAttribute('aria-expanded', 'false');
+      });
+    });
+  })();
+</script>
 </body>
 </html>
