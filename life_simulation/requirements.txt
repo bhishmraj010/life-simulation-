@@ -15,5 +15,5 @@ whitenoise==6.12.0
 django
 groq
 gunicorn
-
-
+dj-database-url
+psycopg2-binary
